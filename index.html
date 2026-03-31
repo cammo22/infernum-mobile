@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>INFERNUM</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+:root{
+--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a28;--bg4:#222236;
+--text:#e0dfe8;--text2:#9898a8;--text3:#5a5a6e;
+--accent:#c8a0ff;--accent2:#8858e8;--accent3:#6030c0;
+--hp:#e04050;--hp-bg:#3a1018;--xp:#40c880;--xp-bg:#0a2a18;
+--gold:#f0c040;--gold-bg:#2a2008;
+--common:#9898a8;--magic:#4090ff;--rare:#a040ff;--legendary:#f0a020;--cursed:#ff4060;
+--border:#2a2a3e;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+
+.header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:48px;z-index:10}
+.header-title{font-size:16px;font-weight:700;letter-spacing:3px;color:var(--accent)}
+.header-floor{font-size:12px;color:var(--text2);display:flex;gap:8px;align-items:center}
+.header-floor span{font-weight:600}
+.header-floor .gold{color:var(--gold)}
+.header-floor .shard{color:var(--accent)}
+.header-actions{display:flex;gap:6px}
+.header-btn{background:none;border:1px solid var(--border);color:var(--text2);font-size:15px;padding:4px 8px;border-radius:6px;cursor:pointer;transition:all 0.15s}
+.header-btn:active{transform:scale(0.92)}
+.header-btn.save:active{background:var(--accent3);color:#fff;border-color:var(--accent)}
+.header-btn.reset:active{background:var(--hp);color:#fff;border-color:var(--hp)}
+.xp-bar-wrap{height:6px;background:var(--xp-bg);border-radius:3px;margin:0 16px;overflow:hidden}
+.xp-bar{height:100%;background:linear-gradient(90deg,var(--xp),#60f0a0);border-radius:3px;transition:width 0.3s}
+
+.main{flex:1;overflow:hidden;position:relative}
+.tab{display:none;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.tab.active{display:flex}
+
+.combat-tab{padding:0}
+.enemy-panel{padding:20px 16px 12px;text-align:center;background:linear-gradient(180deg,var(--bg2),var(--bg));position:relative;min-height:28%;border-bottom:1px solid var(--border);cursor:pointer}
+.enemy-rarity{font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.enemy-name{font-size:16px;font-weight:600;margin-bottom:8px}
+.enemy-hp-wrap{height:8px;background:var(--hp-bg);border-radius:4px;overflow:hidden;margin:0 20px}
+.enemy-hp{height:100%;background:linear-gradient(90deg,var(--hp),#ff6070);border-radius:4px;transition:width 0.15s}
+.enemy-hp-text{font-size:11px;color:var(--text2);margin-top:4px}
+.enemy-sprite{width:80px;height:80px;margin:12px auto 0;position:relative}
+.enemy-sprite .body{width:60px;height:70px;border-radius:12px 12px 6px 6px;position:absolute;left:10px;top:5px;animation:enemyFloat 3s ease-in-out infinite}
+.enemy-sprite .eye{width:8px;height:8px;border-radius:50%;position:absolute;top:20px}
+.enemy-sprite .eye.l{left:18px}.enemy-sprite .eye.r{right:18px}
+@keyframes enemyFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.enemy-sprite.hit{animation:enemyHit 0.15s}
+@keyframes enemyHit{0%{filter:brightness(2)}100%{filter:brightness(1)}}
+
+.player-panel{padding:16px;text-align:center;min-height:35%;border-bottom:1px solid var(--border)}
+.player-sprite{width:70px;height:70px;margin:0 auto 12px;position:relative}
+.player-sprite .body{width:50px;height:55px;border-radius:10px 10px 6px 6px;background:linear-gradient(180deg,#4060c0,#2840a0);position:absolute;left:10px;top:8px;box-shadow:0 0 15px rgba(64,96,192,0.3)}
+.player-sprite .head{width:30px;height:30px;border-radius:50%;background:linear-gradient(180deg,#d0a070,#b88858);position:absolute;left:20px;top:0;box-shadow:0 0 10px rgba(208,160,112,0.2)}
+.player-hp-wrap{height:8px;background:var(--hp-bg);border-radius:4px;overflow:hidden;margin:0 20px}
+.player-hp{height:100%;background:linear-gradient(90deg,var(--hp),#ff6070);border-radius:4px;transition:width 0.3s}
+.player-hp-text{font-size:11px;color:var(--text2);margin-top:4px}
+.player-stats-row{display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:11px;color:var(--text2)}
+.player-stats-row span{display:flex;align-items:center;gap:4px}
+
+.log-panel{flex:1;min-height:15%;overflow-y:auto;padding:8px 16px;background:var(--bg2);border-top:1px solid var(--border)}
+.log-entry{font-size:11px;padding:2px 0;color:var(--text3);border-bottom:1px solid rgba(255,255,255,0.03)}
+.log-entry.damage{color:var(--hp)}.log-entry.crit{color:var(--gold);font-weight:600}
+.log-entry.loot{color:var(--magic)}.log-entry.legendary{color:var(--legendary);font-weight:600}
+.log-entry.gold{color:var(--gold)}.log-entry.level{color:var(--xp);font-weight:600}
+.log-entry.boss{color:var(--cursed);font-weight:600}
+.log-entry.auto{color:var(--text3);font-style:italic}
+
+.nav{display:flex;background:var(--bg2);border-top:1px solid var(--border);min-height:56px;z-index:10}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;color:var(--text3);font-size:10px;padding:8px 0;cursor:pointer;transition:color 0.2s}
+.nav-btn.active{color:var(--accent)}
+.nav-btn .icon{font-size:20px;line-height:1}
+
+.inv-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.inv-header h2{font-size:15px;font-weight:600}
+.inv-filters{display:flex;gap:8px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.inv-filter{padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text2);font-size:11px;cursor:pointer}
+.inv-filter.active{background:var(--accent3);color:var(--text);border-color:var(--accent2)}
+.inv-list{flex:1;overflow-y:auto;padding:8px}
+.inv-item{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;background:var(--bg3);border-radius:10px;border-left:3px solid var(--common);cursor:pointer;transition:transform 0.1s}
+.inv-item:active{transform:scale(0.98)}
+.inv-item.magic{border-left-color:var(--magic)}.inv-item.rare{border-left-color:var(--rare)}.inv-item.legendary{border-left-color:var(--legendary)}.inv-item.cursed{border-left-color:var(--cursed)}
+.inv-item-icon{font-size:22px;width:32px;text-align:center;flex-shrink:0}
+.inv-item-info{flex:1;min-width:0}
+.inv-item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-item-meta{font-size:10px;color:var(--text2);margin-top:2px}
+.inv-item-stats{font-size:10px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-dismantle-btn{background:var(--hp-bg);border:1px solid rgba(224,64,80,0.3);color:var(--hp);padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0;transition:background 0.15s;white-space:nowrap}
+.inv-dismantle-btn:active{background:rgba(224,64,80,0.3);color:#fff}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding:24px 20px 32px;animation:slideUp 0.3s ease;position:relative}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;z-index:1}
+.modal h3{font-size:18px;margin-bottom:4px}
+.modal-rarity{font-size:12px;margin-bottom:12px}
+.modal-stats{margin:16px 0}
+.modal-stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.modal-stat .val{color:var(--xp);font-weight:600}
+.modal-actions{display:flex;gap:8px;margin-top:20px}
+.btn{flex:1;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:transform 0.1s,opacity 0.2s}
+.btn:active{transform:scale(0.96)}
+.btn-equip{background:var(--xp);color:#000}.btn-dismantle{background:var(--bg4);color:var(--text)}.btn-dismiss{background:none;border:1px solid var(--border);color:var(--text2)}
+.btn-buy{background:var(--gold);color:#000}
+.btn-recycle{background:var(--hp-bg);border:1px solid rgba(224,64,80,0.3);color:var(--hp)}
+
+.dungeon-header{padding:16px;text-align:center;background:var(--bg2);border-bottom:1px solid var(--border)}
+.dungeon-header h2{font-size:15px;font-weight:600}
+.dungeon-header p{font-size:12px;color:var(--text2);margin-top:4px}
+.rooms-row{display:flex;gap:6px;padding:16px;justify-content:center;flex-wrap:wrap}
+.room{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--bg3);border:2px solid var(--border);position:relative;transition:all 0.3s}
+.room.cleared{opacity:0.3;border-color:var(--text3)}
+.room.current{border-color:var(--accent);box-shadow:0 0 15px rgba(200,160,255,0.3);animation:roomPulse 2s infinite}
+@keyframes roomPulse{0%,100%{box-shadow:0 0 15px rgba(200,160,255,0.3)}50%{box-shadow:0 0 25px rgba(200,160,255,0.5)}}
+.room.boss{border-color:var(--cursed)}
+.dungeon-info{padding:16px;background:var(--bg2);border-top:1px solid var(--border)}
+.dungeon-info p{font-size:12px;color:var(--text2);margin-bottom:8px}
+.dungeon-actions{display:flex;gap:8px;padding:16px}
+.dungeon-actions .btn{background:var(--accent3);color:var(--text)}
+
+.shop-header{padding:16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.shop-header h2{font-size:15px;font-weight:600}
+.shop-timer{font-size:12px;color:var(--text2);margin-top:4px}
+.shop-section{padding:12px 16px}
+.shop-section h3{font-size:13px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.shop-item{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:6px;background:var(--bg3);border-radius:10px;border-left:3px solid var(--common)}
+.shop-item.magic{border-left-color:var(--magic)}.shop-item.rare{border-left-color:var(--rare)}
+.shop-item-info{flex:1}
+.shop-item-name{font-size:13px;font-weight:600}
+.shop-item-meta{font-size:10px;color:var(--text2)}
+.shop-item-price{font-size:13px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:4px}
+.shop-item-price .btn{padding:6px 12px;font-size:11px}
+
+.char-header{text-align:center;padding:20px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.char-sprite-large{width:100px;height:100px;margin:0 auto 12px;position:relative}
+.char-sprite-large .body{width:70px;height:75px;border-radius:14px 14px 8px 8px;background:linear-gradient(180deg,#4060c0,#2840a0);position:absolute;left:15px;top:18px;box-shadow:0 0 25px rgba(64,96,192,0.4);animation:charFloat 4s ease-in-out infinite}
+.char-sprite-large .head{width:40px;height:40px;border-radius:50%;background:linear-gradient(180deg,#d0a070,#b88858);position:absolute;left:30px;top:0;box-shadow:0 0 15px rgba(208,160,112,0.3)}
+@keyframes charFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.char-name{font-size:16px;font-weight:700}
+.char-level{font-size:12px;color:var(--text2)}
+.stats-grid{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-card{background:var(--bg3);border-radius:10px;padding:12px;text-align:center}
+.stat-card .val{font-size:20px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:10px;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
+.equip-grid{padding:16px}
+.equip-grid h3{font-size:13px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.equip-slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.equip-slot{aspect-ratio:1;background:var(--bg3);border-radius:10px;border:2px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;color:var(--text3);cursor:pointer;transition:border-color 0.2s}
+.equip-slot.filled{border-style:solid;border-color:var(--accent2)}
+.equip-slot .slot-icon{font-size:22px}
+.achievements-section{padding:16px}
+.achievements-section h3{font-size:13px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.achievement{display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:6px;background:var(--bg3);border-radius:10px}
+.achievement .icon{font-size:24px}.achievement .name{font-size:13px;font-weight:600}.achievement .desc{font-size:11px;color:var(--text2)}
+.achievement.locked{opacity:0.4}
+
+.drop-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:none;align-items:center;justify-content:center}
+.drop-overlay.open{display:flex}
+.drop-item{text-align:center;animation:dropAppear 0.5s ease;max-height:90vh;overflow-y:auto;padding:10px}
+@keyframes dropAppear{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.drop-icon{font-size:64px;margin-bottom:16px}
+.drop-name{font-size:22px;font-weight:700;margin-bottom:4px}
+.drop-rarity{font-size:13px;margin-bottom:16px}
+.drop-stats{text-align:left;background:var(--bg3);border-radius:10px;padding:16px;margin:0 20px 12px}
+.drop-stat{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.drop-stat .val{color:var(--xp);font-weight:600}
+.drop-equipped-label{font-size:11px;color:var(--text2);margin:12px 20px 6px;text-transform:uppercase;letter-spacing:1px;text-align:left}
+.drop-equipped-box{background:var(--bg4);border-radius:10px;padding:12px;margin:0 20px 16px}
+.drop-equipped-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.drop-equipped-meta{font-size:10px;color:var(--text2);margin-bottom:8px}
+.drop-equipped-stat{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:var(--text3)}
+.drop-actions{display:flex;gap:6px;padding:0 20px}
+
+.reset-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:300;display:none;align-items:center;justify-content:center}
+.reset-overlay.open{display:flex}
+.reset-card{background:var(--bg2);border-radius:20px;padding:32px 24px;text-align:center;max-width:320px;width:90%;border:2px solid var(--hp)}
+.reset-card h2{color:var(--hp);margin-bottom:12px}
+.reset-card p{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.reset-card .btn{margin-top:8px}
+
+.offline-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.94);z-index:200;display:none;align-items:center;justify-content:center}
+.offline-overlay.open{display:flex}
+.offline-card{background:var(--bg2);border-radius:20px;padding:32px 24px;text-align:center;max-width:340px;width:90%;animation:slideUp 0.4s ease}
+.offline-card h2{font-size:20px;margin-bottom:16px}
+.offline-stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.offline-stat .val{color:var(--gold);font-weight:600}
+.offline-items{margin:16px 0}
+.offline-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px}
+.offline-close{margin-top:16px}
+
+.perk-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:none;align-items:center;justify-content:center}
+.perk-overlay.open{display:flex}
+.perk-container{display:flex;gap:12px;padding:20px;max-width:420px;width:100%;flex-direction:column}
+.perk-container h2{text-align:center;font-size:18px;margin-bottom:8px}
+.perk-cards{display:flex;gap:10px}
+.perk-card{flex:1;background:var(--bg3);border:2px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center;cursor:pointer;transition:all 0.2s}
+.perk-card:active{transform:scale(0.95);border-color:var(--accent)}
+.perk-card .perk-name{font-size:12px;font-weight:700;margin:8px 0 6px;color:var(--accent)}
+.perk-card .perk-desc{font-size:10px;color:var(--text2);line-height:1.4}
+.perk-card .perk-icon{font-size:32px}
+
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--bg4);color:var(--text);padding:10px 20px;border-radius:10px;font-size:12px;z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.shake{animation:shake 0.15s}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-title">INFERNUM</div>
+    <div class="header-floor">F<span id="floorNum">1</span> ◆<span class="gold" id="goldDisplay">0</span> ◈<span class="shard" id="shardDisplay">0</span></div>
+    <div class="header-actions">
+      <button class="header-btn save" onclick="saveGame();showToast('💾 Salvato!')" title="Salva">💾</button>
+      <button class="header-btn reset" onclick="showResetConfirm()" title="Reset">🗑</button>
+    </div>
+  </div>
+  <div class="xp-bar-wrap"><div class="xp-bar" id="xpBar" style="width:0%"></div></div>
+
+  <div class="main">
+    <div class="tab combat-tab active" id="tab-combat">
+      <div class="enemy-panel" id="enemyPanel">
+        <div class="enemy-rarity" id="enemyRarity" style="color:var(--common)">Normal</div>
+        <div class="enemy-name" id="enemyName">Shadow Rat</div>
+        <div class="enemy-hp-wrap"><div class="enemy-hp" id="enemyHp" style="width:100%"></div></div>
+        <div class="enemy-hp-text" id="enemyHpText">50/50</div>
+        <div class="enemy-sprite" id="enemySprite">
+          <div class="body" id="enemyBody" style="background:linear-gradient(180deg,#504040,#302020)"></div>
+          <div class="eye l" style="background:#ff4040"></div>
+          <div class="eye r" style="background:#ff4040"></div>
+        </div>
+      </div>
+      <div class="player-panel">
+        <div class="player-sprite"><div class="head"></div><div class="body"></div></div>
+        <div class="player-hp-wrap"><div class="player-hp" id="playerHp" style="width:100%"></div></div>
+        <div class="player-hp-text" id="playerHpText">100/100</div>
+        <div class="player-stats-row">
+          <span>ATK <span id="statAtk">5</span></span>
+          <span>DEF <span id="statDef">2</span></span>
+          <span>Crit <span id="statCrit">5%</span></span>
+          <span>Spd <span id="statSpd">1.0/s</span></span>
+        </div>
+      </div>
+      <div class="log-panel" id="logPanel"></div>
+    </div>
+
+    <div class="tab" id="tab-inventory">
+      <div class="inv-header"><h2>📦 INVENTARIO <span id="invCount">0/20</span></h2></div>
+      <div class="inv-filters">
+        <button class="inv-filter active" data-filter="all">Tutti</button>
+        <button class="inv-filter" data-filter="weapon">Armi</button>
+        <button class="inv-filter" data-filter="armor">Armature</button>
+        <button class="inv-filter" data-filter="accessory">Accessori</button>
+      </div>
+      <div class="inv-list" id="invList"></div>
+    </div>
+
+    <div class="tab" id="tab-dungeon">
+      <div class="dungeon-header">
+        <h2 id="dungeonBiome">I Corridoi Dimenticati</h2>
+        <p id="dungeonFloor">Floor 1 — Stanza 1/8</p>
+      </div>
+      <div class="rooms-row" id="roomsRow"></div>
+      <div class="dungeon-info">
+        <p id="dungeonInfo">Stanze rimanenti: 8/8</p>
+        <p id="dungeonEvent"></p>
+      </div>
+      <div class="dungeon-actions">
+        <button class="btn" onclick="advanceRoom()">AVANZA</button>
+        <button class="btn" id="btnAuto" onclick="toggleAuto()">AUTO: ON</button>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-shop">
+      <div class="shop-header">
+        <h2>🏪 NEGOZIO DELL'ABISSO</h2>
+        <div class="shop-timer">Refresh in: <span id="shopTimer">01:00:00</span></div>
+      </div>
+      <div class="shop-section"><h3>Item in Vendita</h3><div id="shopItems"></div></div>
+      <div class="shop-section"><h3>Forzieri</h3><div id="shopChests"></div></div>
+      <div class="shop-section"><h3>Consumabili</h3><div id="shopConsumables"></div></div>
+      <div class="shop-section"><h3>Upgrade</h3><div id="shopUpgrades"></div></div>
+    </div>
+
+    <div class="tab" id="tab-character">
+      <div class="char-header">
+        <div class="char-sprite-large"><div class="head"></div><div class="body"></div></div>
+        <div class="char-name">Viandante</div>
+        <div class="char-level">Livello <span id="charLevel">1</span> — Prestige <span id="charPrestige">0</span></div>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="equip-grid">
+        <h3>Equipaggiamento</h3>
+        <div class="equip-slots" id="equipSlots"></div>
+      </div>
+      <div class="achievements-section"><h3>Obiettivi</h3><div id="achievementsList"></div></div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" data-tab="combat"><span class="icon">⚔</span>Combat</button>
+    <button class="nav-btn" data-tab="inventory"><span class="icon">📦</span>Inventory</button>
+    <button class="nav-btn" data-tab="dungeon"><span class="icon">🗺</span>Dungeon</button>
+    <button class="nav-btn" data-tab="shop"><span class="icon">🏪</span>Shop</button>
+    <button class="nav-btn" data-tab="character"><span class="icon">👤</span>Character</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="itemModal"><div class="modal"><button class="modal-close" onclick="closeModal('itemModal')">&times;</button><div id="modalContent"></div></div></div>
+<div class="drop-overlay" id="dropOverlay"><div class="drop-item" id="dropContent"></div></div>
+<div class="reset-overlay" id="resetOverlay"><div class="reset-card" id="resetContent"></div></div>
+<div class="offline-overlay" id="offlineOverlay"><div class="offline-card" id="offlineContent"></div></div>
+<div class="perk-overlay" id="perkOverlay"><div class="perk-container" id="perkContent"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+var BIOMES=["I Corridoi Dimenticati","Le Cripte Fradice","Le Camere di Vetro","Il Pozzo Nero","La Fornace Eterna","Il Giardino di Ossa","La Sala degli Echi","L'Abisso Senza Fondo","La Torre Rovesciata","Il Trono dell'Eco"];
+var ENEMY_NAMES=["Shadow Rat","Bone Crawler","Hollow Wraith","Abyssal Leech","Dark Imp","Cursed Shade","Void Spider","Blight Hound","Phasm Stalker","Nightmare Moth","Flesh Weaver","Soul Eater","Dread Warden","Gloom Crawler","Ash Fiend","Rot Spawn","Plague Bearer","Shadow Knight","Abyssal Guardian","Echo Phantom"];
+var BOSS_NAMES=["Warden of Darkness","The Hollow King","Vessel of Ruin","The Forgotten One","Echo of Despair","Lord of the Pit","The Nameless","Keeper of Chains","The Shattered","Abyssal Sovereign"];
+var ITEM_PREFIXES={common:["Rusty","Worn","Cracked","Dull","Basic","Old","Simple","Faded"],magic:["Glowing","Arcane","Mystic","Enchanted","Runic","Ethereal","Shimmering","Pulsing"],rare:["Ancient","Void-touched","Soul-forged","Echo-blessed","Abyssal","Shadow-crafted","Dread-forged","Star-metal"],legendary:["Godslayer","Worldbreaker","Eternity's Edge","Voidheart","Soulrender","Doombringer","Apocalypse","Infernum"],cursed:["Cursed","Blood-soaked","Soul-bound","Demon-forged","Wretched","Tormented","Damned","Forsaken"]};
+var ITEM_BASES={weapon:{names:["Blade","Axe","Mace","Dagger","Staff","Spear","Scythe","Hammer"],icon:"⚔"},chest:{names:["Cuirass","Robe","Vest","Plate","Mail","Tunic","Hauberk","Breastplate"],icon:"🥋"},legs:{names:["Greaves","Leggings","Pants","Tassets","Chausses","Cuisses","Sabatons","Breeches"],icon:"👖"},head:{names:["Helm","Crown","Hood","Mask","Circlet","Visor","Coif","Cap"],icon:"👑"},ring:{names:["Ring","Band","Signet","Loop","Circle","Seal"],icon:"💍"},amulet:{names:["Amulet","Pendant","Necklace","Charm","Talisman","Locket"],icon:"📿"},boots:{names:["Boots","Greaves","Treads","Sandals","Sabatons","Shoes"],icon:"👢"},cloak:{names:["Cloak","Cape","Mantle","Shroud","Wrap","Veil"],icon:"🧣"}};
+var MODIFIERS={weapon:[{key:"atk",label:"ATK",min:1,max:5,pct:false},{key:"crit",label:"Crit",min:1,max:8,pct:true},{key:"atkSpd",label:"Atk Spd",min:5,max:15,pct:true}],chest:[{key:"def",label:"DEF",min:1,max:4,pct:false},{key:"maxHp",label:"MaxHP",min:5,max:20,pct:false},{key:"lifesteal",label:"LifeSteal",min:1,max:5,pct:true}],legs:[{key:"def",label:"DEF",min:1,max:3,pct:false},{key:"maxHp",label:"MaxHP",min:5,max:15,pct:false},{key:"dodge",label:"Dodge",min:1,max:5,pct:true}],head:[{key:"def",label:"DEF",min:1,max:3,pct:false},{key:"crit",label:"Crit",min:1,max:5,pct:true},{key:"goldFind",label:"Gold Find",min:5,max:20,pct:true}],ring:[{key:"atk",label:"ATK",min:1,max:3,pct:false},{key:"crit",label:"Crit",min:1,max:5,pct:true},{key:"goldFind",label:"Gold Find",min:5,max:15,pct:true}],amulet:[{key:"maxHp",label:"MaxHP",min:5,max:15,pct:false},{key:"lifesteal",label:"LifeSteal",min:1,max:4,pct:true},{key:"def",label:"DEF",min:1,max:3,pct:false}],boots:[{key:"dodge",label:"Dodge",min:1,max:6,pct:true},{key:"def",label:"DEF",min:1,max:2,pct:false},{key:"atkSpd",label:"Atk Spd",min:3,max:10,pct:true}],cloak:[{key:"dodge",label:"Dodge",min:1,max:5,pct:true},{key:"maxHp",label:"MaxHP",min:5,max:12,pct:false},{key:"goldFind",label:"Gold Find",min:5,max:15,pct:true}]};
+var RARITY_COLORS={common:"#9898a8",magic:"#4090ff",rare:"#a040ff",legendary:"#f0a020",cursed:"#ff4060"};
+var RARITY_WEIGHTS={common:50,magic:30,rare:12,legendary:3,cursed:5};
+var RARITY_MOD_COUNT={common:1,magic:2,rare:3,legendary:4,cursed:3};
+var RARITY_MULT={common:1,magic:1.5,rare:2.5,legendary:4,cursed:3};
+var SHARD_VALUES={common:1,magic:3,rare:8,legendary:20,cursed:20};
+var RARITY_ORDER={legendary:0,cursed:1,rare:2,magic:3,common:4};
+var PERK_POOL=[
+  {name:"Aura d'Acciaio",desc:"+2 DEF per item Rare+ equip",icon:"🛡",type:"computed"},
+  {name:"Pelle di Pietra",desc:"-20% danno dai boss",icon:"🪨",type:"computed"},
+  {name:"Sangue dell'Abisso",desc:"LifeSteal +3%",icon:"🩸",type:"flat",stat:"baseLifesteal",val:3},
+  {name:"Occhio del Cacciatore",desc:"Crit +5%",icon:"👁",type:"flat",stat:"baseCrit",val:5},
+  {name:"Passo Leggero",desc:"Dodge +4%",icon:"💨",type:"flat",stat:"baseDodge",val:4},
+  {name:"Fame d'Oro",desc:"Gold Find +15%",icon:"◆",type:"flat",stat:"baseGoldFind",val:15},
+  {name:"Cuore Pulsante",desc:"MaxHP +30",icon:"❤",type:"flat",stat:"baseMaxHp",val:30},
+  {name:"Lama Affilata",desc:"ATK +3",icon:"⚔",type:"flat",stat:"baseAtk",val:3},
+  {name:"Velocità dell'Eco",desc:"Atk Spd +8%",icon:"⚡",type:"flat",stat:"baseAtkSpd",val:8},
+  {name:"Resilienza",desc:"+15 MaxHP, +1 DEF",icon:"💪",type:"multi",apply:function(p){p.baseMaxHp=(p.baseMaxHp||100)+15;p.baseDef+=1}},
+  {name:"Fortuna dell'Abisso",desc:"+5% Rare+ drop",icon:"🍀",type:"computed"},
+  {name:"Vendetta",desc:"+10% ATK sotto 30% HP",icon:"😡",type:"computed"}
+];
+var ACHIEVEMENTS=[
+  {id:"first_kill",name:"Primo Sangue",desc:"Sconfiggi il primo nemico",icon:"⚔",check:function(g){return g.player.kills>=1}},
+  {id:"floor_10",name:"Esploratore",desc:"Raggiungi Floor 10",icon:"🗺",check:function(g){return g.player.highestFloor>=10}},
+  {id:"floor_25",name:"Veterano",desc:"Raggiungi Floor 25",icon:"🗺",check:function(g){return g.player.highestFloor>=25}},
+  {id:"floor_50",name:"Leggenda",desc:"Raggiungi Floor 50",icon:"🏆",check:function(g){return g.player.highestFloor>=50}},
+  {id:"boss_1",name:"Uccisore di Boss",desc:"Sconfiggi un Boss Eco",icon:"☠",check:function(g){return g.player.bossesKilled>=1}},
+  {id:"legendary_1",name:"Tesoro Raro",desc:"Trova un Legendary",icon:"⭐",check:function(g){return g.player.legendaryFound>=1}},
+  {id:"kills_100",name:"Centurione",desc:"100 nemici sconfitti",icon:"💀",check:function(g){return g.player.kills>=100}},
+  {id:"kills_1000",name:"Massacratore",desc:"1000 nemici sconfitti",icon:"💀",check:function(g){return g.player.kills>=1000}},
+  {id:"gold_10k",name:"Ricco",desc:"Accumula 10,000 Gold",icon:"◆",check:function(g){return g.player.gold>=10000}},
+  {id:"level_10",name:"Apprendista",desc:"Raggiungi livello 10",icon:"📈",check:function(g){return g.player.level>=10}}
+];
+var MYSTERY_EVENTS=[
+  {name:"Mercante Strano",desc:"2 item rari a prezzo scontato!",icon:"🧙",type:"shop"},
+  {name:"Altare Insanguinato",desc:"Sacrifica 25% HP per un Legendary",icon:"🩸",type:"altar"},
+  {name:"Eco del Passato",desc:"Combatti un'ombra di te stesso",icon:"👤",type:"shadow"},
+  {name:"Pozzo dei Desideri",desc:"200 Gold per un buff casuale",icon:"🕳",type:"well"},
+  {name:"Frammento di Memoria",desc:"Lore piece + 5 Soul Shards",icon:"📜",type:"lore"},
+  {name:"Calma Innaturale",desc:"HP completamente rigenerati",icon:"🕊",type:"rest"},
+  {name:"Il Cacciatore",desc:"Mini-boss con drop Magic+",icon:"🏹",type:"hunter"},
+  {name:"Tempio Dimenticato",desc:"+10% ATK e DEF per 5 floor",icon:"🏛",type:"temple"}
+];
+
+var G={
+  player:{level:1,xp:0,xpToNext:100,hp:100,baseMaxHp:100,baseAtk:5,baseDef:2,baseCrit:5,baseDodge:3,baseLifesteal:0,baseGoldFind:0,baseAtkSpd:0,gold:0,soulShards:0,echoDust:0,prestige:0,inventory:[],maxInventory:20,equipment:{weapon:null,chest:null,legs:null,head:null,ring:null,amulet:null,boots:null,cloak:null},perks:[],kills:0,bossesKilled:0,legendaryFound:0,highestFloor:1,deaths:0,consecutiveNoDeath:0},
+  enemy:null,
+  floor:1,room:0,roomsPerFloor:8,roomTypes:[],
+  autoAdvance:true,
+  combatTick:1100,enemyTick:2200,
+  blocked:false,
+  uiDirty:true,
+  shopItems:[],shopChests:[],shopConsumables:[],shopRefresh:Date.now()+3600000,
+  unlockedAchievements:[],
+  pendingDrop:null,
+  combatTimer:null,enemyTimer:null
+};
+
+function computeStats(){
+  var p=G.player;
+  var s={atk:p.baseAtk,def:p.baseDef,maxHp:p.baseMaxHp||100,crit:p.baseCrit,dodge:p.baseDodge,lifesteal:p.baseLifesteal,goldFind:p.baseGoldFind,atkSpd:p.baseAtkSpd};
+  var slots=Object.values(p.equipment);
+  for(var i=0;i<slots.length;i++){
+    var eq=slots[i];
+    if(!eq)continue;
+    for(var j=0;j<eq.mods.length;j++){
+      var m=eq.mods[j];
+      if(m.key==="maxHp")s.maxHp+=m.value;
+      else if(m.key==="atk")s.atk+=m.value;
+      else if(m.key==="def")s.def+=m.value;
+      else if(m.key==="crit")s.crit+=m.value;
+      else if(m.key==="dodge")s.dodge+=m.value;
+      else if(m.key==="lifesteal")s.lifesteal+=m.value;
+      else if(m.key==="goldFind")s.goldFind+=m.value;
+      else if(m.key==="atkSpd")s.atkSpd+=m.value;
+    }
+  }
+  var rarePlus=0;
+  for(var k=0;k<slots.length;k++){if(slots[k]&&(slots[k].rarity==="rare"||slots[k].rarity==="legendary"||slots[k].rarity==="cursed"))rarePlus++;}
+  if(p.perks.indexOf("Aura d'Acciaio")!==-1)s.def+=2*rarePlus;
+  if(p.perks.indexOf("Vendetta")!==-1&&p.hp<s.maxHp*0.3)s.atk=Math.floor(s.atk*1.1);
+  if(p.perks.indexOf("Fortuna dell'Abisso")!==-1)s.goldFind+=5;
+  s.maxHp=Math.max(s.maxHp,1);s.atk=Math.max(s.atk,1);s.def=Math.max(s.def,0);
+  s.crit=Math.min(s.crit,80);s.dodge=Math.min(s.dodge,60);s.lifesteal=Math.min(s.lifesteal,50);
+  return s;
+}
+
+function getTickInterval(){
+  var stats=computeStats();
+  return Math.max(400,G.combatTick/(1+stats.atkSpd/100));
+}
+
+function rollRarity(){
+  var total=0;
+  for(var k in RARITY_WEIGHTS)total+=RARITY_WEIGHTS[k];
+  var r=Math.random()*total;
+  for(var k in RARITY_WEIGHTS){r-=RARITY_WEIGHTS[k];if(r<=0)return k;}
+  return"common";
+}
+
+function generateItem(forceRarity,forceSlot){
+  var slotKeys=Object.keys(ITEM_BASES);
+  var slot=forceSlot||slotKeys[Math.floor(Math.random()*slotKeys.length)];
+  var rarity=forceRarity||rollRarity();
+  var prefixes=ITEM_PREFIXES[rarity];
+  var prefix=prefixes[Math.floor(Math.random()*prefixes.length)];
+  var base=ITEM_BASES[slot];
+  var name=base.names[Math.floor(Math.random()*base.names.length)];
+  var modPool=MODIFIERS[slot];
+  var modCount=RARITY_MOD_COUNT[rarity];
+  var mult=RARITY_MULT[rarity];
+  var shuffled=modPool.slice().sort(function(){return Math.random()-0.5;});
+  var mods=shuffled.slice(0,Math.min(modCount,shuffled.length)).map(function(m){
+    var val=Math.floor((m.min+Math.random()*(m.max-m.min))*mult);
+    return{key:m.key,label:m.label,value:Math.max(1,val),pct:m.pct};
+  });
+  return{id:Date.now()+Math.random(),name:prefix+" "+name,rarity:rarity,slot:slot,icon:base.icon,mods:mods,levelReq:Math.floor(G.floor/5)};
+}
+
+function getShardValue(item){return SHARD_VALUES[item.rarity]||1;}
+
+function getItemScore(item){
+  var score=0;
+  for(var i=0;i<item.mods.length;i++){
+    var m=item.mods[i];
+    score+=m.value*(m.pct?2:1);
+  }
+  score+=RARITY_ORDER[item.rarity]*50;
+  return score;
+}
+
+function generateEnemy(){
+  var isBoss=G.room===G.roomsPerFloor-1;
+  var floorScale=1+(G.floor-1)*0.15;
+  var adaptiveMod=G.player.deaths>3?0.9:(G.player.consecutiveNoDeath>20?1.05:1);
+  var hp=Math.floor((isBoss?80:30)*floorScale*adaptiveMod);
+  var atk=Math.floor((isBoss?8:3)*floorScale*adaptiveMod);
+  var def=Math.floor((isBoss?4:1)*floorScale*0.5);
+  var bossIdx=Math.max(0,Math.floor(G.floor/10)-1);
+  var name=isBoss?BOSS_NAMES[bossIdx%BOSS_NAMES.length]:ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
+  var rarity=isBoss?"boss":(Math.random()<0.15?"elite":"normal");
+  var colors={
+    normal:{body:"linear-gradient(180deg,#504040,#302020)",eye:"#ff4040",label:"Normal",color:RARITY_COLORS.common},
+    elite:{body:"linear-gradient(180deg,#604060,#402040)",eye:"#ff8040",label:"Elite",color:RARITY_COLORS.magic},
+    boss:{body:"linear-gradient(180deg,#802020,#401010)",eye:"#ff0040",label:"BOSS ECO",color:RARITY_COLORS.cursed}
+  };
+  var c=colors[rarity]||colors.normal;
+  return{name:name,hp:hp,maxHp:hp,atk:atk,def:def,rarity:c.label,color:c.color,bodyColor:c.body,eyeColor:c.eye,isBoss:rarity==="boss",xpReward:Math.floor((isBoss?50:10)*floorScale),goldReward:Math.floor((isBoss?40:8)*floorScale)};
+}
+
+function generateRooms(){
+  var rooms=[];
+  for(var i=0;i<G.roomsPerFloor;i++){
+    if(i===G.roomsPerFloor-1){rooms.push("boss");continue;}
+    if(i===G.roomsPerFloor-3&&G.floor%10!==0){rooms.push("treasure");continue;}
+    var r=Math.random();
+    if(r<0.5)rooms.push("combat");
+    else if(r<0.65)rooms.push("elite");
+    else if(r<0.8)rooms.push("mystery");
+    else if(r<0.9)rooms.push("shrine");
+    else rooms.push("combat");
+  }
+  return rooms;
+}
+
+function playerAttack(){
+  if(G.blocked||!G.enemy||G.enemy.hp<=0)return;
+  var stats=computeStats();
+  var dmg=Math.max(1,stats.atk-G.enemy.def+Math.floor(Math.random()*3));
+  var isCrit=Math.random()*100<stats.crit;
+  if(isCrit)dmg=Math.floor(dmg*1.8);
+  G.enemy.hp=Math.max(0,G.enemy.hp-dmg);
+  addLog((isCrit?"✦ CRIT! ":"")+dmg+" dmg → "+G.enemy.name,isCrit?"crit":"damage");
+  shakeEnemy();
+  if(stats.lifesteal>0){
+    var heal=Math.max(1,Math.floor(dmg*stats.lifesteal/100));
+    G.player.hp=Math.min(computeStats().maxHp,G.player.hp+heal);
+  }
+  updateEnemyUI();
+  updatePlayerUI();
+  if(G.enemy.hp<=0)enemyDeath();
+}
+
+function enemyAttack(){
+  if(G.blocked||!G.enemy||G.enemy.hp<=0)return;
+  var stats=computeStats();
+  if(Math.random()*100<stats.dodge){addLog("👁 Dodged!","level");return;}
+  var dmg=Math.max(1,G.enemy.atk-stats.def+Math.floor(Math.random()*2));
+  if(G.player.perks.indexOf("Pelle di Pietra")!==-1&&G.enemy.isBoss)dmg=Math.floor(dmg*0.8);
+  G.player.hp=Math.max(0,G.player.hp-dmg);
+  addLog(G.enemy.name+": "+dmg+" dmg","damage");
+  updatePlayerUI();
+  if(G.player.hp<=0)playerDeath();
+}
+
+function tapDamage(){
+  if(G.blocked||!G.enemy||G.enemy.hp<=0)return;
+  G.enemy.hp=Math.max(0,G.enemy.hp-1);
+  addLog("👆 1 dmg","damage");
+  shakeEnemy();
+  updateEnemyUI();
+  if(G.enemy.hp<=0)enemyDeath();
+}
+
+function handleDrop(item){
+  var equipped=G.player.equipment[item.slot];
+  var invSpace=G.player.inventory.length<G.player.maxInventory;
+  var isUpgrade=!equipped||getItemScore(item)>getItemScore(equipped);
+  if(invSpace&&isUpgrade){
+    G.pendingDrop=item;
+    G.blocked=true;
+    showDropOverlay(item);
+    return true;
+  }
+  if(invSpace){
+    G.player.inventory.push(item);
+    addLog("📦 "+item.name+" → inventory","auto");
+    return false;
+  }
+  var shards=getShardValue(item);
+  G.player.soulShards+=shards;
+  addLog("♻ "+item.name+" → "+shards+" ◈ (inv full)","auto");
+  return false;
+}
+
+function enemyDeath(){
+  var e=G.enemy;
+  G.player.kills++;
+  if(e.isBoss)G.player.bossesKilled++;
+  G.player.consecutiveNoDeath++;
+  var stats=computeStats();
+  var gold=Math.floor(e.goldReward*(1+stats.goldFind/100));
+  G.player.gold+=gold;
+  addLog("+"+gold+" ◆","gold");
+  G.room++;
+  if(G.room>=G.roomsPerFloor){
+    G.floor++;G.room=0;
+    G.player.highestFloor=Math.max(G.player.highestFloor,G.floor);
+    G.roomTypes=generateRooms();
+    addLog("🗺 Floor "+G.floor+" — "+BIOMES[Math.floor((G.floor-1)/10)%BIOMES.length],"level");
+  }
+  G.enemy=null;
+  markUI();
+  gainXP(e.xpReward);
+  if(G.blocked)return;
+  var dropChance=e.isBoss?1:(e.rarity==="Elite"?0.35:0.18);
+  if(Math.random()<dropChance){
+    var forceRarity=e.isBoss?(G.floor>=50?"legendary":(Math.random()<0.3?"rare":"magic")):undefined;
+    var item=generateItem(forceRarity);
+    if(item.rarity==="legendary")G.player.legendaryFound++;
+    handleDrop(item);
+  }
+  if(G.autoAdvance&&!G.blocked){
+    setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},400);
+  }
+}
+
+function playerDeath(){
+  G.player.deaths++;
+  G.player.consecutiveNoDeath=0;
+  G.blocked=true;
+  addLog("☠ Dead! Respawning...","boss");
+  G.player.hp=computeStats().maxHp;
+  G.floor=Math.max(1,G.floor-1);
+  G.room=0;
+  G.roomTypes=generateRooms();
+  G.enemy=null;
+  markUI();
+  setTimeout(function(){G.blocked=false;spawnEnemy();},1200);
+}
+
+function spawnEnemy(){
+  if(G.room>=G.roomsPerFloor||G.blocked)return;
+  var roomType=G.roomTypes[G.room];
+  if(roomType==="boss"||roomType==="elite"){
+    var e=generateEnemy();
+    if(roomType==="elite"){e.hp=Math.floor(e.hp*1.5);e.atk=Math.floor(e.atk*1.3);e.maxHp=e.hp;e.rarity="Elite";e.color=RARITY_COLORS.magic;e.bodyColor="linear-gradient(180deg,#604060,#402040)";e.eyeColor="#ff8040";e.xpReward=Math.floor(e.xpReward*1.5);e.goldReward=Math.floor(e.goldReward*1.5);}
+    G.enemy=e;
+  }else if(roomType==="mystery"){triggerMysteryEvent();return;}
+  else if(roomType==="treasure"){
+    addLog("💎 Treasure Room!","loot");
+    var item=generateItem(Math.random()<0.2?"rare":"magic");
+    handleDrop(item);
+    G.room++;
+    if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}
+    markUI();
+    return;
+  }else if(roomType==="shrine"){triggerShrine();return;}
+  else{G.enemy=generateEnemy();}
+  updateEnemyUI();
+  markUI();
+}
+
+function gainXP(amount){
+  G.player.xp+=amount;
+  while(G.player.xp>=G.player.xpToNext){
+    G.player.xp-=G.player.xpToNext;
+    G.player.level++;
+    G.player.xpToNext=Math.floor(100*Math.pow(1.15,G.player.level-1));
+    G.player.baseMaxHp=(G.player.baseMaxHp||100)+10;
+    G.player.hp=computeStats().maxHp;
+    G.player.baseAtk+=1;
+    G.player.baseDef+=1;
+    addLog("📈 Level "+G.player.level+"!","level");
+    if(G.player.level%3===0){G.blocked=true;showPerkSelect();return;}
+  }
+}
+
+function triggerMysteryEvent(){
+  G.blocked=true;
+  var event=MYSTERY_EVENTS[Math.floor(Math.random()*MYSTERY_EVENTS.length)];
+  addLog("? "+event.name+": "+event.desc,"loot");
+  if(event.type==="rest"){G.player.hp=computeStats().maxHp;addLog("HP restored!","level");G.blocked=false;}
+  else if(event.type==="lore"){G.player.soulShards+=5;addLog("+5 Soul Shards","loot");G.blocked=false;}
+  else if(event.type==="altar"){var m=computeStats().maxHp;G.player.hp=Math.max(1,G.player.hp-Math.floor(m*0.25));var item=generateItem("legendary");handleDrop(item);G.room++;if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}markUI();return;}
+  else if(event.type==="well"){if(G.player.gold>=200){G.player.gold-=200;addLog("Buff: ATK +5 per 10 floor","level");}else{addLog("Not enough gold!","damage");}G.blocked=false;}
+  else if(event.type==="hunter"){var e=generateEnemy();e.hp=Math.floor(e.hp*2);e.maxHp=e.hp;e.atk=Math.floor(e.atk*1.5);e.rarity="Mini-Boss";e.color=RARITY_COLORS.rare;e.bodyColor="linear-gradient(180deg,#604080,#402060)";e.eyeColor="#c060ff";e.xpReward=Math.floor(e.xpReward*2);e.goldReward=Math.floor(e.goldReward*2);G.enemy=e;updateEnemyUI();markUI();return;}
+  else if(event.type==="temple"){G.player.baseAtk=Math.floor(G.player.baseAtk*1.1);G.player.baseDef=Math.floor(G.player.baseDef*1.1);addLog("🏛 ATK & DEF +10%!","level");G.blocked=false;}
+  G.room++;
+  if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}
+  markUI();
+  if(G.autoAdvance&&!G.blocked)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},400);
+}
+
+function triggerShrine(){
+  G.blocked=true;
+  var buffs=[
+    {name:"Shrine of Power",desc:"ATK +20%",apply:function(){G.player.baseAtk=Math.max(1,Math.floor(G.player.baseAtk*1.2));}},
+    {name:"Shrine of Protection",desc:"DEF +20%",apply:function(){G.player.baseDef=Math.floor(G.player.baseDef*1.2);}},
+    {name:"Shrine of Vitality",desc:"MaxHP +25",apply:function(){G.player.baseMaxHp=(G.player.baseMaxHp||100)+25;}}
+  ];
+  var buff=buffs[Math.floor(Math.random()*buffs.length)];
+  buff.apply();
+  addLog("🔥 "+buff.name+": "+buff.desc,"level");
+  G.blocked=false;
+  G.room++;
+  if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}
+  markUI();
+  if(G.autoAdvance)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},400);
+}
+
+function markUI(){G.uiDirty=true;}
+
+function updateEnemyUI(){
+  if(!G.enemy)return;
+  var e=G.enemy;
+  document.getElementById("enemyRarity").textContent=e.rarity;
+  document.getElementById("enemyRarity").style.color=e.color;
+  document.getElementById("enemyName").textContent=e.name;
+  document.getElementById("enemyHp").style.width=(e.hp/e.maxHp*100)+"%";
+  document.getElementById("enemyHpText").textContent=e.hp+"/"+e.maxHp;
+  document.getElementById("enemyBody").style.background=e.bodyColor;
+  var eyes=document.querySelectorAll("#enemySprite .eye");
+  for(var i=0;i<eyes.length;i++)eyes[i].style.background=e.eyeColor;
+}
+
+function updatePlayerUI(){
+  var stats=computeStats();
+  var hpPct=Math.max(0,G.player.hp/stats.maxHp*100);
+  document.getElementById("playerHp").style.width=hpPct+"%";
+  document.getElementById("playerHpText").textContent=G.player.hp+"/"+stats.maxHp;
+  document.getElementById("statAtk").textContent=stats.atk;
+  document.getElementById("statDef").textContent=stats.def;
+  document.getElementById("statCrit").textContent=stats.crit+"%";
+  document.getElementById("statSpd").textContent=(getTickInterval()/1000).toFixed(1)+"/s";
+}
+
+function updateAllUI(){
+  document.getElementById("floorNum").textContent=G.floor;
+  document.getElementById("goldDisplay").textContent=G.player.gold.toLocaleString();
+  document.getElementById("shardDisplay").textContent=G.player.soulShards.toLocaleString();
+  document.getElementById("xpBar").style.width=Math.min(100,G.player.xp/G.player.xpToNext*100)+"%";
+  updatePlayerUI();
+  updateEnemyUI();
+  updateDungeonUI();
+  updateInventoryUI();
+  updateCharacterUI();
+  updateShopUI();
+}
+
+function addLog(text,cls){
+  var panel=document.getElementById("logPanel");
+  var entry=document.createElement("div");
+  entry.className="log-entry"+(cls?" "+cls:"");
+  entry.textContent=text;
+  panel.appendChild(entry);
+  if(panel.children.length>60)panel.removeChild(panel.firstChild);
+  panel.scrollTop=panel.scrollHeight;
+}
+
+function shakeEnemy(){
+  var s=document.getElementById("enemySprite");
+  s.classList.add("hit","shake");
+  setTimeout(function(){s.classList.remove("hit","shake");},200);
+}
+
+function updateDungeonUI(){
+  var biome=BIOMES[Math.floor((G.floor-1)/10)%BIOMES.length];
+  document.getElementById("dungeonBiome").textContent=biome;
+  document.getElementById("dungeonFloor").textContent="Floor "+G.floor+" — Stanza "+(G.room+1)+"/"+G.roomsPerFloor;
+  document.getElementById("dungeonInfo").textContent="Stanze rimanenti: "+(G.roomsPerFloor-G.room)+"/"+G.roomsPerFloor;
+  var row=document.getElementById("roomsRow");
+  row.innerHTML="";
+  var icons={combat:"⚔",elite:"☠",mystery:"?",boss:"👑",treasure:"💎",shrine:"🔥"};
+  for(var i=0;i<G.roomsPerFloor;i++){
+    var room=document.createElement("div");
+    room.className="room"+(i<G.room?" cleared":"")+(i===G.room?" current":"")+(G.roomTypes[i]==="boss"?" boss":"");
+    room.textContent=icons[G.roomTypes[i]]||"⚔";
+    row.appendChild(room);
+  }
+}
+
+function updateInventoryUI(){
+  var list=document.getElementById("invList");
+  var p=G.player;
+  document.getElementById("invCount").textContent=p.inventory.length+"/"+p.maxInventory;
+  list.innerHTML="";
+  var filter=document.querySelector(".inv-filter.active");
+  var f=filter?filter.dataset.filter:"all";
+  var filtered=f==="all"?p.inventory:p.inventory.filter(function(i){return i.slot===f;});
+  filtered.sort(function(a,b){return(RARITY_ORDER[a.rarity]||5)-(RARITY_ORDER[b.rarity]||5);});
+  for(var i=0;i<filtered.length;i++){
+    var item=filtered[i];
+    var shards=getShardValue(item);
+    var el=document.createElement("div");
+    el.className="inv-item "+item.rarity;
+    el.innerHTML='<div class="inv-item-icon">'+item.icon+'</div><div class="inv-item-info"><div class="inv-item-name" style="color:'+RARITY_COLORS[item.rarity]+'">'+item.name+'</div><div class="inv-item-meta">'+item.rarity.charAt(0).toUpperCase()+item.rarity.slice(1)+" · "+item.slot+'</div><div class="inv-item-stats">'+item.mods.map(function(m){return"+"+m.value+(m.pct?"%":"")+" "+m.label;}).join("  ")+'</div></div><button class="inv-dismantle-btn" title="Ricicla per '+shards+' ◈">♻ '+shards+'◈</button>';
+    (function(it){el.addEventListener("click",function(e){if(e.target.classList.contains("inv-dismantle-btn"))return;showItemModal(it);});})(item);
+    (function(it){el.querySelector(".inv-dismantle-btn").addEventListener("click",function(e){e.stopPropagation();quickDismantle(it.id);});})(item);
+    list.appendChild(el);
+  }
+}
+
+function updateCharacterUI(){
+  var stats=computeStats();
+  var p=G.player;
+  document.getElementById("charLevel").textContent=p.level;
+  document.getElementById("charPrestige").textContent=p.prestige;
+  document.getElementById("statsGrid").innerHTML=
+    '<div class="stat-card"><div class="val">'+stats.atk+'</div><div class="label">⚔ ATK</div></div>'+
+    '<div class="stat-card"><div class="val">'+stats.def+'</div><div class="label">🛡 DEF</div></div>'+
+    '<div class="stat-card"><div class="val">'+stats.maxHp+'</div><div class="label">❤ MaxHP</div></div>'+
+    '<div class="stat-card"><div class="val">'+stats.crit+'%</div><div class="label">✦ Crit</div></div>'+
+    '<div class="stat-card"><div class="val">'+stats.dodge+'%</div><div class="label">👁 Dodge</div></div>'+
+    '<div class="stat-card"><div class="val">'+stats.lifesteal+'%</div><div class="label">🩸 Lifesteal</div></div>'+
+    '<div class="stat-card"><div class="val">'+stats.goldFind+'%</div><div class="label">◆ Gold Find</div></div>'+
+    '<div class="stat-card"><div class="val">'+p.kills+'</div><div class="label">💀 Kills</div></div>';
+  var slots=document.getElementById("equipSlots");
+  slots.innerHTML="";
+  var slotIcons={weapon:"⚔",chest:"🥋",legs:"👖",head:"👑",ring:"💍",amulet:"📿",boots:"👢",cloak:"🧣"};
+  var slotKeys=Object.keys(slotIcons);
+  for(var i=0;i<slotKeys.length;i++){
+    var slot=slotKeys[i];
+    var eq=p.equipment[slot];
+    var el=document.createElement("div");
+    el.className="equip-slot"+(eq?" filled":"");
+    el.innerHTML='<div class="slot-icon">'+(eq?eq.icon:slotIcons[slot])+'</div><div>'+slot+'</div>';
+    if(eq){el.style.borderColor=RARITY_COLORS[eq.rarity];(function(e){el.addEventListener("click",function(){showItemModal(e,true);});})(eq);}
+    slots.appendChild(el);
+  }
+  var achList=document.getElementById("achievementsList");
+  achList.innerHTML="";
+  for(var i=0;i<ACHIEVEMENTS.length;i++){
+    var a=ACHIEVEMENTS[i];
+    var unlocked=a.check(G);
+    if(unlocked&&G.unlockedAchievements.indexOf(a.id)===-1)G.unlockedAchievements.push(a.id);
+    var el=document.createElement("div");
+    el.className="achievement"+(unlocked?"":" locked");
+    el.innerHTML='<div class="icon">'+a.icon+'</div><div><div class="name">'+a.name+'</div><div class="desc">'+a.desc+'</div></div>';
+    achList.appendChild(el);
+  }
+}
+
+function updateShopUI(){
+  if(G.shopItems.length===0)generateShop();
+  var itemsDiv=document.getElementById("shopItems");
+  itemsDiv.innerHTML="";
+  for(var i=0;i<G.shopItems.length;i++){
+    var item=G.shopItems[i];
+    var el=document.createElement("div");
+    el.className="shop-item "+item.rarity;
+    el.innerHTML='<div class="inv-item-icon">'+item.icon+'</div><div class="shop-item-info"><div class="shop-item-name" style="color:'+RARITY_COLORS[item.rarity]+'">'+item.name+'</div><div class="shop-item-meta">'+item.rarity+" · "+item.mods.map(function(m){return"+"+m.value+(m.pct?"%":"")+" "+m.label;}).join(" ")+'</div></div><div class="shop-item-price"><button class="btn btn-buy" onclick="buyShopItem('+i+')">'+item.price+'◆</button></div>';
+    itemsDiv.appendChild(el);
+  }
+  var chestsDiv=document.getElementById("shopChests");
+  chestsDiv.innerHTML="";
+  for(var i=0;i<G.shopChests.length;i++){
+    var c=G.shopChests[i];
+    var el=document.createElement("div");
+    el.className="shop-item";
+    el.innerHTML='<div class="inv-item-icon">'+c.icon+'</div><div class="shop-item-info"><div class="shop-item-name">'+c.name+'</div><div class="shop-item-meta">'+c.desc+'</div></div><div class="shop-item-price"><button class="btn btn-buy" onclick="buyChest('+i+')">'+c.price+(c.currency==="gold"?"◆":" ◈")+'</button></div>';
+    chestsDiv.appendChild(el);
+  }
+  var consDiv=document.getElementById("shopConsumables");
+  consDiv.innerHTML="";
+  for(var i=0;i<G.shopConsumables.length;i++){
+    var c=G.shopConsumables[i];
+    var el=document.createElement("div");
+    el.className="shop-item";
+    el.innerHTML='<div class="inv-item-icon">'+c.icon+'</div><div class="shop-item-info"><div class="shop-item-name">'+c.name+'</div><div class="shop-item-meta">'+c.desc+'</div></div><div class="shop-item-price"><button class="btn btn-buy" onclick="buyConsumable('+i+')">'+c.price+(c.currency==="gold"?"◆":" ◈")+'</button></div>';
+    consDiv.appendChild(el);
+  }
+  var upgDiv=document.getElementById("shopUpgrades");
+  upgDiv.innerHTML="";
+  var invCost=100+G.player.maxInventory*50;
+  var upgEl=document.createElement("div");
+  upgEl.className="shop-item";
+  upgEl.innerHTML='<div class="inv-item-icon">📦</div><div class="shop-item-info"><div class="shop-item-name">Slot Inventario</div><div class="shop-item-meta">Attuale: '+G.player.maxInventory+' → '+(G.player.maxInventory+5)+'</div></div><div class="shop-item-price"><button class="btn btn-buy" onclick="buyInvSlot()">'+invCost+'◆</button></div>';
+  upgDiv.appendChild(upgEl);
+}
+
+function generateShop(){
+  G.shopItems=[];
+  for(var i=0;i<3;i++){
+    var rarity=Math.random()<0.3?"rare":"magic";
+    var item=generateItem(rarity);
+    item.price=Math.floor((rarity==="rare"?400:150)+Math.random()*200);
+    G.shopItems.push(item);
+  }
+  G.shopChests=[
+    {name:"Wood Chest",icon:"🪵",desc:"1-2 Magic items",price:200,currency:"gold"},
+    {name:"Iron Chest",icon:"⚙",desc:"1 Rare+ item",price:600,currency:"gold"},
+    {name:"Void Chest",icon:"🌑",desc:"1 Legendary item",price:30,currency:"dust"}
+  ];
+  G.shopConsumables=[
+    {name:"HP Potion",icon:"🧪",desc:"Restore 50% HP",price:100,currency:"gold"}
+  ];
+  G.shopRefresh=Date.now()+3600000;
+}
+
+function buyShopItem(i){
+  var item=G.shopItems[i];
+  if(G.player.gold<item.price){showToast("Not enough gold!");return;}
+  if(G.player.inventory.length>=G.player.maxInventory){showToast("Inventory full!");return;}
+  G.player.gold-=item.price;
+  G.player.inventory.push(item);
+  G.shopItems.splice(i,1);
+  showToast("Acquired "+item.name+"!");
+  updateAllUI();
+}
+
+function buyChest(i){
+  var chest=G.shopChests[i];
+  var cur=chest.currency==="gold"?"gold":"echoDust";
+  if(G.player[cur]<chest.price){showToast("Not enough "+(chest.currency==="gold"?"gold":"Echo Dust")+"!");return;}
+  G.player[cur]-=chest.price;
+  var rarity=chest.name.indexOf("Wood")!==-1?"magic":(chest.name.indexOf("Iron")!==-1?"rare":"legendary");
+  var count=chest.name.indexOf("Wood")!==-1?(1+Math.floor(Math.random()*2)):1;
+  for(var j=0;j<count;j++){
+    var item=generateItem(rarity);
+    if(item.rarity==="legendary")G.player.legendaryFound++;
+    handleDrop(item);
+  }
+  updateAllUI();
+}
+
+function buyConsumable(i){
+  var c=G.shopConsumables[i];
+  var cur=c.currency==="gold"?"gold":"echoDust";
+  if(G.player[cur]<c.price){showToast("Not enough "+(c.currency==="gold"?"gold":"Echo Dust")+"!");return;}
+  G.player[cur]-=c.price;
+  if(c.name.indexOf("HP Potion")!==-1){
+    var stats=computeStats();
+    G.player.hp=Math.min(stats.maxHp,G.player.hp+Math.floor(stats.maxHp*0.5));
+    showToast("HP restored!");
+  }else{showToast("Purchased "+c.name);}
+  updateAllUI();
+}
+
+function buyInvSlot(){
+  var cost=100+G.player.maxInventory*50;
+  if(G.player.gold<cost){showToast("Not enough gold!");return;}
+  G.player.gold-=cost;
+  G.player.maxInventory+=5;
+  showToast("Inventory: "+G.player.maxInventory+" slots!");
+  updateAllUI();
+}
+
+function showItemModal(item,isEquipped){
+  var modal=document.getElementById("itemModal");
+  var content=document.getElementById("modalContent");
+  var equipped=G.player.equipment[item.slot];
+  var shards=getShardValue(item);
+  var html='<h3 style="color:'+RARITY_COLORS[item.rarity]+'">'+item.name+'</h3>';
+  html+='<div class="modal-rarity" style="color:'+RARITY_COLORS[item.rarity]+'">'+item.rarity.charAt(0).toUpperCase()+item.rarity.slice(1)+" · "+item.slot+'</div>';
+  html+='<div class="modal-stats">'+item.mods.map(function(m){return'<div class="modal-stat"><span>'+m.label+'</span><span class="val">+'+m.value+(m.pct?"%":"")+'</span></div>';}).join('')+'</div>';
+  if(equipped&&equipped.id!==item.id){
+    html+='<div style="font-size:12px;color:var(--text2);margin:12px 0 8px;text-transform:uppercase;letter-spacing:1px">🔄 Attualmente equipaggiato</div>';
+    html+='<div style="background:var(--bg4);border-radius:10px;padding:12px;margin-bottom:8px">';
+    html+='<div style="font-size:14px;font-weight:600;color:'+RARITY_COLORS[equipped.rarity]+';margin-bottom:4px">'+equipped.icon+' '+equipped.name+'</div>';
+    html+='<div style="font-size:11px;color:var(--text2);margin-bottom:8px">'+equipped.rarity.charAt(0).toUpperCase()+equipped.rarity.slice(1)+" · "+item.slot+'</div>';
+    html+=equipped.mods.map(function(m){return'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--text3)"><span>'+m.label+'</span><span>+'+m.value+(m.pct?"%":"")+'</span></div>';}).join('');
+    html+='</div>';
+  }
+  html+='<div class="modal-actions">';
+  if(!isEquipped)html+='<button class="btn btn-equip" onclick="equipItem(\''+item.id+'\')">EQUIP</button>';
+  else html+='<button class="btn btn-dismiss" onclick="unequipItem(\''+item.slot+'\')">UNEQUIP</button>';
+  html+='<button class="btn btn-recycle" onclick="dismantleItem(\''+item.id+'\')">♻ Ricicla ('+shards+'◈)</button>';
+  html+='<button class="btn btn-dismiss" onclick="closeModal(\'itemModal\')">CLOSE</button></div>';
+  content.innerHTML=html;
+  modal.classList.add("open");
+}
+
+function equipItem(id){
+  var item=G.player.inventory.find(function(i){return String(i.id)===String(id);});
+  if(!item)return;
+  var old=G.player.equipment[item.slot];
+  G.player.equipment[item.slot]=item;
+  G.player.inventory=G.player.inventory.filter(function(i){return String(i.id)!==String(id);});
+  if(old&&G.player.inventory.length<G.player.maxInventory)G.player.inventory.push(old);
+  G.player.hp=Math.min(computeStats().maxHp,G.player.hp);
+  closeModal("itemModal");
+  showToast("Equipped "+item.name);
+  updateAllUI();
+}
+
+function unequipItem(slot){
+  var eq=G.player.equipment[slot];
+  if(!eq)return;
+  if(G.player.inventory.length>=G.player.maxInventory){showToast("Inventory full!");return;}
+  G.player.inventory.push(eq);
+  G.player.equipment[slot]=null;
+  closeModal("itemModal");
+  updateAllUI();
+}
+
+function dismantleItem(id){
+  var item=G.player.inventory.find(function(i){return String(i.id)===String(id);});
+  if(!item)return;
+  var shards=getShardValue(item);
+  G.player.soulShards+=shards;
+  G.player.inventory=G.player.inventory.filter(function(i){return String(i.id)!==String(id);});
+  closeModal("itemModal");
+  showToast("♻ Dismantled for "+shards+" ◈");
+  updateAllUI();
+}
+
+function quickDismantle(id){
+  var item=G.player.inventory.find(function(i){return String(i.id)===String(id);});
+  if(!item)return;
+  var shards=getShardValue(item);
+  G.player.soulShards+=shards;
+  G.player.inventory=G.player.inventory.filter(function(i){return String(i.id)!==String(id);});
+  showToast("♻ "+item.name+" → "+shards+" ◈");
+  updateAllUI();
+}
+
+function showDropOverlay(item){
+  var overlay=document.getElementById("dropOverlay");
+  var content=document.getElementById("dropContent");
+  var equipped=G.player.equipment[item.slot];
+  var shards=getShardValue(item);
+  var html=
+    '<div class="drop-icon">'+item.icon+'</div>'+
+    '<div class="drop-name" style="color:'+RARITY_COLORS[item.rarity]+'">'+item.name+'</div>'+
+    '<div class="drop-rarity" style="color:'+RARITY_COLORS[item.rarity]+'">'+item.rarity.charAt(0).toUpperCase()+item.rarity.slice(1)+" · "+item.slot+'</div>'+
+    '<div class="drop-stats">'+item.mods.map(function(m){return'<div class="drop-stat"><span>'+m.label+'</span><span class="val">+'+m.value+(m.pct?"%":"")+'</span></div>';}).join('')+'</div>';
+  if(equipped){
+    html+='<div class="drop-equipped-label">🔄 Attualmente equipaggiato</div>';
+    html+='<div class="drop-equipped-box">';
+    html+='<div class="drop-equipped-name" style="color:'+RARITY_COLORS[equipped.rarity]+'">'+equipped.icon+' '+equipped.name+'</div>';
+    html+='<div class="drop-equipped-meta">'+equipped.rarity.charAt(0).toUpperCase()+equipped.rarity.slice(1)+" · "+item.slot+'</div>';
+    html+=equipped.mods.map(function(m){return'<div class="drop-equipped-stat"><span>'+m.label+'</span><span>+'+m.value+(m.pct?"%":"")+'</span></div>';}).join('');
+    html+='</div>';
+  }
+  html+='<div class="drop-actions">'+
+    '<button class="btn btn-equip" onclick="equipFromDrop()">EQUIP</button>'+
+    '<button class="btn btn-dismantle" onclick="collectFromDrop()">📦 COLLECT</button>'+
+    '<button class="btn btn-recycle" onclick="dismantleFromDrop()">♻ '+shards+'◈</button></div>';
+  content.innerHTML=html;
+  overlay.classList.add("open");
+}
+
+function equipFromDrop(){
+  var item=G.pendingDrop;
+  if(!item)return;
+  var old=G.player.equipment[item.slot];
+  G.player.equipment[item.slot]=item;
+  if(old&&G.player.inventory.length<G.player.maxInventory)G.player.inventory.push(old);
+  G.pendingDrop=null;
+  document.getElementById("dropOverlay").classList.remove("open");
+  G.blocked=false;
+  showToast("Equipped "+item.name);
+  updateAllUI();
+  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+}
+
+function collectFromDrop(){
+  var item=G.pendingDrop;
+  if(!item)return;
+  if(G.player.inventory.length<G.player.maxInventory)G.player.inventory.push(item);
+  G.pendingDrop=null;
+  document.getElementById("dropOverlay").classList.remove("open");
+  G.blocked=false;
+  showToast("Collected "+item.name);
+  updateAllUI();
+  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+}
+
+function dismantleFromDrop(){
+  var item=G.pendingDrop;
+  if(!item)return;
+  var shards=getShardValue(item);
+  G.player.soulShards+=shards;
+  G.pendingDrop=null;
+  document.getElementById("dropOverlay").classList.remove("open");
+  G.blocked=false;
+  showToast("♻ Dismantled for "+shards+" ◈");
+  updateAllUI();
+  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+}
+
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+
+function showPerkSelect(){
+  var overlay=document.getElementById("perkOverlay");
+  var content=document.getElementById("perkContent");
+  var available=PERK_POOL.filter(function(p){return G.player.perks.indexOf(p.name)===-1;});
+  var picks=available.sort(function(){return Math.random()-0.5;}).slice(0,3);
+  var html='<h2>🎁 Scegli un Perk</h2><div class="perk-cards">';
+  for(var i=0;i<picks.length;i++){
+    var p=picks[i];
+    html+='<div class="perk-card" onclick="selectPerk(\''+p.name.replace(/'/g,"\\'")+'\')"><div class="perk-icon">'+p.icon+'</div><div class="perk-name">'+p.name+'</div><div class="perk-desc">'+p.desc+'</div></div>';
+  }
+  html+='</div>';
+  content.innerHTML=html;
+  overlay.classList.add("open");
+}
+
+function selectPerk(name){
+  G.player.perks.push(name);
+  var perk=PERK_POOL.find(function(p){return p.name===name;});
+  if(perk&&perk.type==="flat")G.player[perk.stat]=(G.player[perk.stat]||0)+perk.val;
+  if(perk&&perk.type==="multi")perk.apply(G.player);
+  document.getElementById("perkOverlay").classList.remove("open");
+  showToast("Perk: "+name);
+  G.blocked=false;
+  updateAllUI();
+  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+}
+
+function showToast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show");},2000);
+}
+
+function showResetConfirm(){
+  var overlay=document.getElementById("resetOverlay");
+  var content=document.getElementById("resetContent");
+  content.innerHTML=
+    '<h2>⚠️ Reset Tutto?</h2>'+
+    '<p>Sei sicuro? Tutti i progressi, item, livelli e gold verranno persi per sempre. Se non hai salvato, perdi tutto.</p>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button class="btn btn-dismiss" onclick="closeModal(\'resetOverlay\')">Annulla</button>'+
+    '<button class="btn btn-recycle" onclick="resetGame()">🗑 Reset</button>'+
+    '</div>';
+  overlay.classList.add("open");
+}
+
+function resetGame(){
+  localStorage.removeItem("infernum_save");
+  document.getElementById("resetOverlay").classList.remove("open");
+  location.reload();
+}
+
+document.querySelectorAll(".nav-btn").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    document.querySelectorAll(".nav-btn").forEach(function(b){b.classList.remove("active");});
+    document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+    btn.classList.add("active");
+    document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+  });
+});
+
+document.querySelectorAll(".inv-filter").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    document.querySelectorAll(".inv-filter").forEach(function(b){b.classList.remove("active");});
+    btn.classList.add("active");
+    updateInventoryUI();
+  });
+});
+
+document.getElementById("enemyPanel").addEventListener("click",tapDamage);
+
+function advanceRoom(){
+  if(G.blocked){showToast("Wait!");return;}
+  if(G.room<G.roomsPerFloor){
+    G.room++;
+    if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.player.highestFloor=Math.max(G.player.highestFloor,G.floor);G.roomTypes=generateRooms();addLog("🗺 Floor "+G.floor,"level");}
+    G.enemy=null;
+    spawnEnemy();
+    updateAllUI();
+  }
+}
+
+function toggleAuto(){
+  G.autoAdvance=!G.autoAdvance;
+  document.getElementById("btnAuto").textContent="AUTO: "+(G.autoAdvance?"ON":"OFF");
+  document.getElementById("btnAuto").style.background=G.autoAdvance?"var(--accent3)":"var(--bg4)";
+  if(G.autoAdvance&&!G.enemy&&!G.blocked)spawnEnemy();
+}
+
+function startCombatLoop(){
+  stopCombatLoop();
+  var tick=getTickInterval();
+  G.combatTimer=setInterval(function(){
+    if(!G.blocked&&G.enemy&&G.enemy.hp>0)playerAttack();
+  },tick);
+  G.enemyTimer=setInterval(function(){
+    if(!G.blocked&&G.enemy&&G.enemy.hp>0)enemyAttack();
+  },G.enemyTick);
+}
+
+function stopCombatLoop(){
+  if(G.combatTimer){clearInterval(G.combatTimer);G.combatTimer=null;}
+  if(G.enemyTimer){clearInterval(G.enemyTimer);G.enemyTimer=null;}
+}
+
+function restartCombatLoop(){
+  stopCombatLoop();
+  startCombatLoop();
+}
+
+function uiLoop(){
+  if(G.uiDirty){
+    updateAllUI();
+    G.uiDirty=false;
+  }
+  var remaining=Math.max(0,G.shopRefresh-Date.now());
+  var h=Math.floor(remaining/3600000);
+  var m=Math.floor((remaining%3600000)/60000);
+  var s=Math.floor((remaining%60000)/1000);
+  document.getElementById("shopTimer").textContent=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  if(remaining<=0){generateShop();updateShopUI();}
+  requestAnimationFrame(uiLoop);
+}
+
+function saveGame(){
+  try{
+    var data={player:G.player,floor:G.floor,room:G.room,roomTypes:G.roomTypes,shopRefresh:G.shopRefresh,lastSave:Date.now(),unlockedAch:G.unlockedAchievements};
+    localStorage.setItem("infernum_save",JSON.stringify(data));
+  }catch(e){}
+}
+
+function loadGame(){
+  try{
+    var raw=localStorage.getItem("infernum_save");
+    if(!raw)return false;
+    var data=JSON.parse(raw);
+    Object.assign(G.player,data.player);
+    G.floor=data.floor||1;
+    G.room=data.room||0;
+    G.roomTypes=data.roomTypes||generateRooms();
+    G.shopRefresh=data.shopRefresh||Date.now()+3600000;
+    if(data.unlockedAch)G.unlockedAchievements=data.unlockedAch;
+    var elapsed=Date.now()-(data.lastSave||Date.now());
+    if(elapsed>15000){
+      var maxOffline=8*3600000;
+      var capped=Math.min(elapsed,maxOffline);
+      var tick=getTickInterval();
+      var ticks=Math.floor(capped/tick);
+      var kills=Math.floor(ticks*0.8);
+      var stats=computeStats();
+      var gpk=Math.floor((5+G.floor*2)*(1+stats.goldFind/100));
+      var xpk=Math.floor(10+G.floor*3);
+      G.player.gold+=kills*gpk;
+      G.player.xp+=kills*xpk;
+      G.player.kills+=kills;
+      while(G.player.xp>=G.player.xpToNext){
+        G.player.xp-=G.player.xpToNext;
+        G.player.level++;
+        G.player.xpToNext=Math.floor(100*Math.pow(1.15,G.player.level-1));
+        G.player.baseMaxHp=(G.player.baseMaxHp||100)+10;
+        G.player.baseAtk+=1;
+        G.player.baseDef+=1;
+      }
+      G.player.hp=computeStats().maxHp;
+      var offlineItems=Math.min(3,Math.floor(kills*0.05));
+      G._showOffline=true;
+      G._offlineKills=kills;
+      G._offlineGold=kills*gpk;
+      G._offlineXP=kills*xpk;
+      G._offlineItems=offlineItems;
+    }
+    return true;
+  }catch(e){return false;}
+}
+
+function showOfflineSummary(kills,gold,xp,items){
+  var overlay=document.getElementById("offlineOverlay");
+  var content=document.getElementById("offlineContent");
+  var itemsHtml="";
+  for(var i=0;i<items;i++){
+    var item=generateItem();
+    if(G.player.inventory.length<G.player.maxInventory)G.player.inventory.push(item);
+    itemsHtml+='<div class="offline-item"><span>'+item.icon+'</span><span style="color:'+RARITY_COLORS[item.rarity]+'">'+item.name+'</span></div>';
+  }
+  content.innerHTML=
+    '<h2>🌙 Welcome Back!</h2>'+
+    '<div class="offline-stat"><span>Nemici sconfitti</span><span class="val">'+kills+'</span></div>'+
+    '<div class="offline-stat"><span>Gold</span><span class="val">+'+gold.toLocaleString()+' ◆</span></div>'+
+    '<div class="offline-stat"><span>XP</span><span class="val">+'+xp.toLocaleString()+'</span></div>'+
+    (itemsHtml?'<div class="offline-items"><div style="font-size:12px;color:var(--text2);margin-bottom:8px">Item trovati:</div>'+itemsHtml+'</div>':'')+
+    '<button class="btn btn-equip offline-close" onclick="document.getElementById(\'offlineOverlay\').classList.remove(\'open\');updateAllUI();">CONTINUA</button>';
+  overlay.classList.add("open");
+}
+
+function init(){
+  var loaded=loadGame();
+  if(!loaded)G.roomTypes=generateRooms();
+  updateAllUI();
+  if(!G.enemy)spawnEnemy();
+  startCombatLoop();
+  requestAnimationFrame(uiLoop);
+  setInterval(function(){if(!G.blocked)restartCombatLoop();},10000);
+  if(G._showOffline){
+    setTimeout(function(){
+      showOfflineSummary(G._offlineKills,G._offlineGold,G._offlineXP,G._offlineItems);
+    },600);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
