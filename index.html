@@ -533,7 +533,7 @@ function handleDrop(item){
   var equipped=G.player.equipment[item.slot];
   var invSpace=G.player.inventory.length<G.player.maxInventory;
   var isUpgrade=!equipped||getItemScore(item)>getItemScore(equipped);
-  if(invSpace&&isUpgrade){
+  if(isUpgrade){
     G.pendingDrop=item;
     G.blocked=true;
     showDropOverlay(item);
@@ -548,6 +548,12 @@ function handleDrop(item){
   G.player.soulShards+=shards;
   addLog("♻ "+item.name+" → "+shards+" ◈ (inv full)","auto");
   return false;
+}
+
+function tryAdvance(){
+  if(G.blocked||G.enemy)return;
+  if(G.room>=G.roomsPerFloor)return;
+  spawnEnemy();
 }
 
 function enemyDeath(){
@@ -577,8 +583,8 @@ function enemyDeath(){
     if(item.rarity==="legendary")G.player.legendaryFound++;
     handleDrop(item);
   }
-  if(G.autoAdvance&&!G.blocked){
-    setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},400);
+  if(!G.blocked&&G.autoAdvance){
+    setTimeout(tryAdvance,500);
   }
 }
 
@@ -634,19 +640,29 @@ function gainXP(amount){
 }
 
 function triggerMysteryEvent(){
-  G.blocked=true;
   var event=MYSTERY_EVENTS[Math.floor(Math.random()*MYSTERY_EVENTS.length)];
   addLog("? "+event.name+": "+event.desc,"loot");
-  if(event.type==="rest"){G.player.hp=computeStats().maxHp;addLog("HP restored!","level");G.blocked=false;}
-  else if(event.type==="lore"){G.player.soulShards+=5;addLog("+5 Soul Shards","loot");G.blocked=false;}
-  else if(event.type==="altar"){var m=computeStats().maxHp;G.player.hp=Math.max(1,G.player.hp-Math.floor(m*0.25));var item=generateItem("legendary");handleDrop(item);G.room++;if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}markUI();return;}
-  else if(event.type==="well"){if(G.player.gold>=200){G.player.gold-=200;addLog("Buff: ATK +5 per 10 floor","level");}else{addLog("Not enough gold!","damage");}G.blocked=false;}
-  else if(event.type==="hunter"){var e=generateEnemy();e.hp=Math.floor(e.hp*2);e.maxHp=e.hp;e.atk=Math.floor(e.atk*1.5);e.rarity="Mini-Boss";e.color=RARITY_COLORS.rare;e.bodyColor="linear-gradient(180deg,#604080,#402060)";e.eyeColor="#c060ff";e.xpReward=Math.floor(e.xpReward*2);e.goldReward=Math.floor(e.goldReward*2);G.enemy=e;updateEnemyUI();markUI();return;}
-  else if(event.type==="temple"){G.player.baseAtk=Math.floor(G.player.baseAtk*1.1);G.player.baseDef=Math.floor(G.player.baseDef*1.1);addLog("🏛 ATK & DEF +10%!","level");G.blocked=false;}
+  if(event.type==="rest"){G.player.hp=computeStats().maxHp;addLog("HP restored!","level");}
+  else if(event.type==="lore"){G.player.soulShards+=5;addLog("+5 Soul Shards","loot");}
+  else if(event.type==="altar"){
+    var m=computeStats().maxHp;
+    G.player.hp=Math.max(1,G.player.hp-Math.floor(m*0.25));
+    var item=generateItem("legendary");
+    if(handleDrop(item))return;
+  }
+  else if(event.type==="well"){if(G.player.gold>=200){G.player.gold-=200;addLog("Buff: ATK +5 per 10 floor","level");}else{addLog("Not enough gold!","damage");}}
+  else if(event.type==="hunter"){
+    var e=generateEnemy();
+    e.hp=Math.floor(e.hp*2);e.maxHp=e.hp;e.atk=Math.floor(e.atk*1.5);
+    e.rarity="Mini-Boss";e.color=RARITY_COLORS.rare;e.bodyColor="linear-gradient(180deg,#604080,#402060)";e.eyeColor="#c060ff";
+    e.xpReward=Math.floor(e.xpReward*2);e.goldReward=Math.floor(e.goldReward*2);
+    G.enemy=e;updateEnemyUI();markUI();return;
+  }
+  else if(event.type==="temple"){G.player.baseAtk=Math.floor(G.player.baseAtk*1.1);G.player.baseDef=Math.floor(G.player.baseDef*1.1);addLog("🏛 ATK & DEF +10%!","level");}
   G.room++;
   if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}
   markUI();
-  if(G.autoAdvance&&!G.blocked)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},400);
+  if(G.autoAdvance)setTimeout(tryAdvance,400);
 }
 
 function triggerShrine(){
@@ -663,7 +679,7 @@ function triggerShrine(){
   G.room++;
   if(G.room>=G.roomsPerFloor){G.floor++;G.room=0;G.roomTypes=generateRooms();}
   markUI();
-  if(G.autoAdvance)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},400);
+  if(G.autoAdvance)setTimeout(tryAdvance,400);
 }
 
 function markUI(){G.uiDirty=true;}
@@ -1009,7 +1025,7 @@ function equipFromDrop(){
   G.blocked=false;
   showToast("Equipped "+item.name);
   updateAllUI();
-  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+  if(G.autoAdvance)setTimeout(tryAdvance,300);
 }
 
 function collectFromDrop(){
@@ -1021,7 +1037,7 @@ function collectFromDrop(){
   G.blocked=false;
   showToast("Collected "+item.name);
   updateAllUI();
-  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+  if(G.autoAdvance)setTimeout(tryAdvance,300);
 }
 
 function dismantleFromDrop(){
@@ -1034,7 +1050,7 @@ function dismantleFromDrop(){
   G.blocked=false;
   showToast("♻ Dismantled for "+shards+" ◈");
   updateAllUI();
-  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+  if(G.autoAdvance)setTimeout(tryAdvance,300);
 }
 
 function closeModal(id){document.getElementById(id).classList.remove("open");}
@@ -1063,7 +1079,7 @@ function selectPerk(name){
   showToast("Perk: "+name);
   G.blocked=false;
   updateAllUI();
-  if(G.autoAdvance&&!G.enemy)setTimeout(function(){if(!G.enemy&&!G.blocked)spawnEnemy();},300);
+  if(G.autoAdvance)setTimeout(tryAdvance,300);
 }
 
 function showToast(msg){
