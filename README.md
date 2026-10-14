@@ -1,5 +1,7 @@
 # Infernum Mobile
 
+[![Discord](https://img.shields.io/badge/Discord-DaProd-5865F2?logo=discord&logoColor=white)](https://discord.gg/Njs52aacwq)
+
 Welcome to the Infernum Mobile project! This project hosts the source code for the Infernum Mobile application.
 
 ## GitHub Pages
