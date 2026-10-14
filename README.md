@@ -7,3 +7,14 @@ Welcome to the Infernum Mobile project! This project hosts the source code for t
 ## GitHub Pages
 
 You can view the live version of the application at [our GitHub Pages site](https://cammo22.github.io/infernum-mobile/).
+
+---
+
+<!-- discord-card -->
+## 💬 Community
+
+<p align="center">
+  <a href="https://discord.gg/Njs52aacwq"><img src=".github/discord-card.svg" alt="Entra nella community DaProd su Discord" width="720"></a>
+</p>
+
+Domande, idee, bug o solo voglia di chiacchierare? Entra nel **[Discord di DaProd](https://discord.gg/Njs52aacwq)**: ogni app ha la sua stanza e le nuove versioni arrivano in automatico.
